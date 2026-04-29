@@ -1,0 +1,84 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+}
+
+// --- ENUMS ---
+enum Role {
+  USER
+  ADMIN
+}
+
+enum AIModel {
+  GPT4
+  CLAUDE
+  GEMINI
+  MIDJOURNEY
+}
+
+// --- MODELS ---
+model User {
+  id        String   @id @default(uuid())
+  name      String
+  email     String   @unique
+  password  String
+  role      Role     @default(USER)
+  avatar    String?
+  
+  // Relations
+  prompts   Prompt[] @relation("SellerPrompts")
+  orders    Order[]
+  reviews   Review[]
+  
+  createdAt DateTime @default(now())
+}
+
+model Prompt {
+  id            String   @id @default(uuid())
+  title         String
+  description   String
+  promptContent String   // The secret prompt
+  price         Float
+  aiModel       AIModel
+  category      String
+  imageUrl      String?
+  
+  // Relations
+  sellerId      String
+  seller        User     @relation("SellerPrompts", fields: [sellerId], references: [id])
+  orders        Order[]
+  reviews       Review[]
+  
+  createdAt     DateTime @default(now())
+  updatedAt     DateTime @updatedAt
+}
+
+model Order {
+  id         String   @id @default(uuid())
+  amountPaid Float
+  
+  // Relations
+  buyerId    String
+  buyer      User     @relation(fields: [buyerId], references: [id])
+  promptId   String
+  prompt     Prompt   @relation(fields: [promptId], references: [id])
+  
+  createdAt  DateTime @default(now())
+}
+
+model Review {
+  id         String   @id @default(uuid())
+  rating     Int      // e.g., 1 to 5
+  comment    String?
+  
+  // Relations
+  reviewerId String
+  reviewer   User     @relation(fields: [reviewerId], references: [id])
+  promptId   String
+  prompt     Prompt   @relation(fields: [promptId], references: [id])
+  
+  createdAt  DateTime @default(now())
+}
