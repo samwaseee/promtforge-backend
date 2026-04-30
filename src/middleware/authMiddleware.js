@@ -26,3 +26,13 @@ export const verifyToken = (req, res, next) => {
     res.status(401).json({ error: "Invalid or expired token." });
   }
 };
+
+// --- ADMIN AUTHORIZATION MIDDLEWARE ---
+export const isAdmin = (req, res, next) => {
+  // Your verifyToken middleware should have already attached the decoded token to req.user
+  if (req.user && req.user.role === 'ADMIN') {
+    next(); // They are an admin, proceed to the controller!
+  } else {
+    res.status(403).json({ error: 'Access denied. Admins only.' });
+  }
+};

@@ -12,7 +12,11 @@ if (!admin.apps.length) {
 
 export const verifyFirebaseToken = async (req, res, next) => {
   const authHeader = req.headers.authorization;
-  const token = authHeader && authHeader.split('Bearer ')[1];
+  const token = authHeader && authHeader.split(' ')[1];
+
+  if (!authHeader) {
+     console.log("Middleware: No auth header found!"); // ADD THIS
+  }
 
   if (!token) return res.status(401).json({ error: 'No token provided' });
 

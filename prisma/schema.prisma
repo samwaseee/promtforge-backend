@@ -8,8 +8,15 @@ datasource db {
 
 // --- ENUMS ---
 enum Role {
-  USER
+  BUYER
+  SELLER
   ADMIN
+}
+
+enum PromptStatus {
+  PENDING
+  APPROVED
+  REJECTED
 }
 
 enum AIModel {
@@ -25,7 +32,7 @@ model User {
   name      String
   email     String   @unique
   password  String
-  role      Role     @default(USER)
+  role      Role     @default(BUYER) // <--- FIXED THIS TO 'BUYER'
   avatar    String?
   
   // Relations
@@ -51,6 +58,8 @@ model Prompt {
   seller        User     @relation("SellerPrompts", fields: [sellerId], references: [id])
   orders        Order[]
   reviews       Review[]
+
+  status        PromptStatus @default(PENDING)
   
   createdAt     DateTime @default(now())
   updatedAt     DateTime @updatedAt

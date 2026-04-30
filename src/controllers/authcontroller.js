@@ -83,21 +83,28 @@ export const login = async (req, res) => {
 
 // --- SYNC FIREBASE USER TO POSTGRESQL ---
 export const syncUser = async (req, res) => {
+
+  console.log("DEBUG - Incoming Request Body:", req.body);
   try {
     const { uid, email, name, picture } = req.user; 
+    const {role, avatar} = req.body;
+
+    console.log("DEBUG - Destructured Data - Role:", role, "Avatar:", avatar);
 
     // 1. Upsert: Create user if they don't exist, update if they do
     const user = await prisma.user.upsert({
       where: { email: email },
       update: { 
         name: name || undefined, 
-        avatar: picture || undefined 
+        avatar: avatar || picture || undefined,
+        role: role || undefined,
       },
       create: {
         id: uid, 
         email: email,
         name: name || 'New User',
-        avatar: picture || null,
+        avatar: avatar || picture || null,
+        role: role || 'BUYER',
         password: "FIREBASE_AUTH_USER", 
       },
     });

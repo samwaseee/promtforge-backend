@@ -128,3 +128,74 @@ export const getPromptById = async (req, res) => {
     res.status(500).json({ error: 'Failed to fetch prompt details' });
   }
 };
+
+// --- UPDATE A PROMPT (Protected) ---
+export const updatePrompt = async (req, res) => {
+  try {
+    const { id } = req.params;
+    const sellerId = req.user.id; // From your auth middleware
+    const updateData = req.body; // This contains whatever fields they want to change (e.g., { imageUrl: "..." })
+
+    // 1. Verify the prompt exists
+    const existingPrompt = await prisma.prompt.findUnique({
+      where: { id },
+    });
+
+    if (!existingPrompt) {
+      return res.status(404).json({ error: "Prompt not found" });
+    }
+
+    // 2. Security Check: Ensure the user trying to update it is the actual creator
+    if (existingPrompt.sellerId !== sellerId) {
+      return res.status(403).json({ error: "You are not authorized to edit this prompt" });
+    }
+
+    // 3. Update the prompt with the new data
+    const updatedPrompt = await prisma.prompt.update({
+      where: { id },
+      data: updateData,
+    });
+
+    res.status(200).json(updatedPrompt);
+  } catch (error) {
+    console.error("Error updating prompt:", error);
+    res.status(500).json({ error: "Failed to update prompt" });
+  }
+};
+
+// --- ADMIN: GET ALL PENDING PROMPTS ---
+export const getPendingPrompts = async (req, res) => {
+  try {
+    const prompts = await prisma.prompt.findMany({
+      where: { status: "PENDING" },
+      orderBy: { createdAt: "asc" }, // Oldest first
+      include: {
+        seller: {
+          select: { name: true, email: true }
+        }
+      }
+    });
+    res.status(200).json(prompts);
+  } catch (error) {
+    console.error("Error fetching pending prompts:", error);
+    res.status(500).json({ error: "Failed to fetch pending prompts" });
+  }
+};
+
+// --- ADMIN: APPROVE OR REJECT A PROMPT ---
+export const updatePromptStatus = async (req, res) => {
+  try {
+    const { id } = req.params;
+    const { status } = req.body; // Expects "APPROVED" or "REJECTED"
+
+    const updatedPrompt = await prisma.prompt.update({
+      where: { id },
+      data: { status },
+    });
+
+    res.status(200).json(updatedPrompt);
+  } catch (error) {
+    console.error("Error updating prompt status:", error);
+    res.status(500).json({ error: "Failed to update status" });
+  }
+};
