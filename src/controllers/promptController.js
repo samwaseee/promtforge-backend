@@ -5,24 +5,25 @@ export const createPrompt = async (req, res) => {
   try {
     const sellerId = req.user.id; 
 
-    // 1. BULK INSERT MODE: Check if the payload is an Array
+    // 1. BULK INSERT MODE
     if (Array.isArray(req.body)) {
-      // Inject the sellerId into every single prompt object before saving
       const bulkData = req.body.map(item => ({
         ...item,
-        sellerId: sellerId
+        sellerId: sellerId,
+        status: "PENDING" // Ensure bulk inserts are also pending
       }));
 
       const prompts = await prisma.prompt.createMany({
         data: bulkData,
-        skipDuplicates: true, // Prevents errors if you run the same bulk insert twice
+        skipDuplicates: true,
       });
 
       return res.status(201).json({ message: `Successfully blasted ${prompts.count} prompts into the database!` });
     }
 
-    // 2. SINGLE INSERT MODE: Standard Next.js Form Submission
-    const { title, description, promptContent, price, aiModel, category } = req.body;
+    // 2. SINGLE INSERT MODE
+    // ✨ FIX: Added 'imageUrl' to the destructuring list below
+    const { title, description, promptContent, price, aiModel, category, imageUrl } = req.body;
     
     const prompt = await prisma.prompt.create({
       data: {
@@ -30,10 +31,11 @@ export const createPrompt = async (req, res) => {
         description,
         promptContent,
         price,
-        imageUrl,
+        imageUrl: imageUrl || null, // Handle empty string/null safely
         aiModel,
         category,
         sellerId,
+        status: "PENDING", // ✨ Mandatory for your Admin Approval logic
       },
     });
 
