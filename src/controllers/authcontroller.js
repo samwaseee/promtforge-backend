@@ -80,3 +80,27 @@ export const login = async (req, res) => {
     res.status(500).json({ error: 'Server error during login' });
   }
 };
+
+export const syncUser = async (req, res) => {
+  try {
+    const { uid, email, name, picture } = req.user; // From decoded Firebase token
+
+    // Upsert: Create user if they don't exist, update if they do
+    const user = await prisma.user.upsert({
+      where: { email: email },
+      update: { name: name, avatar: picture },
+      create: {
+        id: uid, // Use Firebase UID as the Postgres Primary Key
+        email: email,
+        name: name,
+        avatar: picture,
+        password: "FIREBASE_AUTH_USER", // Placeholder since we won't use it
+      },
+    });
+
+    res.status(200).json(user);
+  } catch (error) {
+    console.error("Sync Error:", error);
+    res.status(500).json({ error: "Failed to sync user with database" });
+  }
+};
