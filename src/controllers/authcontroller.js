@@ -81,24 +81,40 @@ export const login = async (req, res) => {
   }
 };
 
+// --- SYNC FIREBASE USER TO POSTGRESQL ---
 export const syncUser = async (req, res) => {
   try {
-    const { uid, email, name, picture } = req.user; // From decoded Firebase token
+    const { uid, email, name, picture } = req.user; 
 
-    // Upsert: Create user if they don't exist, update if they do
+    // 1. Upsert: Create user if they don't exist, update if they do
     const user = await prisma.user.upsert({
       where: { email: email },
-      update: { name: name, avatar: picture },
+      update: { 
+        name: name || undefined, 
+        avatar: picture || undefined 
+      },
       create: {
-        id: uid, // Use Firebase UID as the Postgres Primary Key
+        id: uid, 
         email: email,
-        name: name,
-        avatar: picture,
-        password: "FIREBASE_AUTH_USER", // Placeholder since we won't use it
+        name: name || 'New User',
+        avatar: picture || null,
+        password: "FIREBASE_AUTH_USER", 
       },
     });
 
-    res.status(200).json(user);
+    // 2. Mint the Express JWT so the rest of your protected routes work
+    const token = jwt.sign(
+      { id: user.id, role: user.role },
+      process.env.JWT_SECRET,
+      { expiresIn: '7d' }
+    );
+
+    // 3. Send both back to the frontend
+    res.status(200).json({
+      token,
+      user: { id: user.id, name: user.name, email: user.email, role: user.role, avatar: user.avatar }
+    });
+
   } catch (error) {
     console.error("Sync Error:", error);
     res.status(500).json({ error: "Failed to sync user with database" });
