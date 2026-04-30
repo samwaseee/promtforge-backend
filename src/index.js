@@ -9,10 +9,23 @@ const app = express();
 const PORT = process.env.PORT || 5000;
 
 const corsOptions = {
-  origin: ['https://promtforge-frontend.vercel.app'], 
+  // Use a function to dynamically check if the origin is allowed
+  origin: function (origin, callback) {
+    const allowedOrigins = [
+      'https://promtforge-frontend.vercel.app', 
+      'http://localhost:3000' // Keeps your local development working!
+    ];
+    // If there is no origin (like a backend-to-backend request), or if it matches our list
+    if (!origin || allowedOrigins.indexOf(origin) !== -1) {
+      callback(null, true);
+    } else {
+      callback(new Error('Not allowed by CORS'));
+    }
+  },
   credentials: true,
   methods: ['GET', 'POST', 'PUT', 'DELETE', 'PATCH']
 };
+
 app.use(cors(corsOptions));
 
 app.use(express.json()); 
