@@ -5,44 +5,44 @@ export const createPrompt = async (req, res) => {
   try {
     const sellerId = req.user.id; 
 
-    // 1. BULK INSERT MODE
-    if (Array.isArray(req.body)) {
-      const bulkData = req.body.map(item => ({
-        ...item,
-        sellerId: sellerId,
-        status: "PENDING" // Ensure bulk inserts are also pending
-      }));
+    // SINGLE INSERT MODE
+    // ✨ FIX: Destructure 'promptText' (or whatever the frontend sends)
+    const { 
+      title, 
+      description, 
+      promptText,     // This is what your frontend is likely sending
+      promptContent,  // Just in case the frontend sends this
+      price, 
+      aiModel, 
+      category, 
+      imageUrl 
+    } = req.body;
 
-      const prompts = await prisma.prompt.createMany({
-        data: bulkData,
-        skipDuplicates: true,
-      });
+    // ✨ FIX: Fallback logic ensures 'promptContent' is never empty
+    const finalPromptContent = promptContent || promptText;
 
-      return res.status(201).json({ message: `Successfully blasted ${prompts.count} prompts into the database!` });
+    if (!finalPromptContent) {
+        return res.status(400).json({ error: "promptContent is missing" });
     }
-
-    // 2. SINGLE INSERT MODE
-    // ✨ FIX: Added 'imageUrl' to the destructuring list below
-    const { title, description, promptContent, price, aiModel, category, imageUrl } = req.body;
     
     const prompt = await prisma.prompt.create({
       data: {
         title,
         description,
-        promptContent,
-        price,
-        imageUrl: imageUrl || null, // Handle empty string/null safely
+        promptContent: finalPromptContent, // Now this will always exist
+        price: parseFloat(price),
+        imageUrl: imageUrl || null,
         aiModel,
         category,
         sellerId,
-        status: "PENDING", // ✨ Mandatory for your Admin Approval logic
+        status: "PENDING",
       },
     });
 
     res.status(201).json(prompt);
   } catch (error) {
     console.error("Error creating prompt:", error);
-    res.status(500).json({ error: "Failed to create prompt" });
+    res.status(500).json({ error: "Failed to create prompt: " + error.message });
   }
 };
 
@@ -56,7 +56,9 @@ export const getAllPrompts = async (req, res) => {
     const take = parseInt(limit);
     const skip = (parseInt(page) - 1) * take;
 
-    let filter = {};
+    let filter = {
+      status: "APPROVED" 
+    };
     if (search) filter.title = { contains: search, mode: 'insensitive' };
     if (category) filter.category = category;
     if (aiModel) filter.aiModel = aiModel;
@@ -80,6 +82,7 @@ export const getAllPrompts = async (req, res) => {
         category: true,
         createdAt: true,
         imageUrl: true,
+        status: true,
         seller: {
           select: { name: true, avatar: true }
         }
