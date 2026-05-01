@@ -4,6 +4,7 @@ import 'dotenv/config';
 
 import authRoutes from './routes/authRoutes.js';
 import promptRoutes from './routes/promptRoutes.js';
+import reviewRoutes from './routes/reviewRoutes.js';
 
 const app = express();
 const PORT = process.env.PORT || 5000;
@@ -31,7 +32,8 @@ app.use(cors(corsOptions));
 app.use(express.json()); 
 
 app.use('/api/auth', authRoutes);
-app.use('/api/prompts', promptRoutes); // <-- Mount the new routes
+app.use('/api/prompts', promptRoutes);
+app.use('/api/reviews', reviewRoutes);
 
 app.get('/', (req, res) => {
   res.json({ message: 'Welcome to the PromptForge API!' });

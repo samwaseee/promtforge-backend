@@ -112,7 +112,18 @@ export const getPromptById = async (req, res) => {
     const prompt = await prisma.prompt.findUnique({
       where: { id },
       include: {
-        seller: { select: { name: true, avatar: true, createdAt: true } },
+        seller: { 
+          select: { name: true, avatar: true, createdAt: true } 
+        },
+        // ✨ THIS WAS MISSING! Fetch the reviews and the person who wrote them
+        reviews: {
+          include: {
+            reviewer: { 
+              select: { name: true, avatar: true } 
+            }
+          },
+          orderBy: { createdAt: 'desc' } // Show newest reviews first
+        }
       }
     });
 
