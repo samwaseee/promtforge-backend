@@ -5,7 +5,7 @@ export const getFeaturedReviews = async (req, res) => {
   try {
     const featuredReviews = await prisma.review.findMany({
       where: { rating: 5 },
-      take: 3,
+      take: 8,
       orderBy: { createdAt: 'desc' },
       include: {
         reviewer: { select: { name: true, avatar: true } },

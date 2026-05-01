@@ -26,68 +26,99 @@ enum AIModel {
   MIDJOURNEY
 }
 
+enum OrderStatus {
+  PENDING // User clicked buy, but hasn't paid yet
+  PAID // Webhook confirmed payment, prompt unlocked
+  FAILED // Payment bounced
+  REFUNDED // Admin issued a refund
+}
+
 // --- MODELS ---
 model User {
-  id        String   @id @default(uuid())
-  name      String
-  email     String   @unique
-  password  String
-  role      Role     @default(BUYER) // <--- FIXED THIS TO 'BUYER'
-  avatar    String?
-  
+  id       String  @id @default(uuid())
+  name     String
+  email    String  @unique
+  password String
+  role     Role    @default(BUYER) // <--- FIXED THIS TO 'BUYER'
+  avatar   String?
+
+  stripeAccountId String? // If using Stripe Connect to route money
+  walletBalance   Float   @default(0) // If you are holding funds in escrow before payout
+
   // Relations
-  prompts   Prompt[] @relation("SellerPrompts")
-  orders    Order[]
-  reviews   Review[]
-  
+  prompts Prompt[] @relation("SellerPrompts")
+  orders  Order[]
+  reviews Review[]
+  payouts Payout[]
+
   createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
 }
 
 model Prompt {
-  id            String   @id @default(uuid())
+  id            String  @id @default(uuid())
   title         String
   description   String
-  promptContent String   // The secret prompt
+  promptContent String // The secret prompt
   price         Float
   aiModel       AIModel
   category      String
   imageUrl      String?
-  
-  // Relations
-  sellerId      String
-  seller        User     @relation("SellerPrompts", fields: [sellerId], references: [id])
-  orders        Order[]
-  reviews       Review[]
 
-  status        PromptStatus @default(PENDING)
-  
-  createdAt     DateTime @default(now())
-  updatedAt     DateTime @updatedAt
+  // Relations
+  sellerId String
+  seller   User     @relation("SellerPrompts", fields: [sellerId], references: [id])
+  orders   Order[]
+  reviews  Review[]
+
+  status PromptStatus @default(PENDING)
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
 }
 
 model Order {
-  id         String   @id @default(uuid())
+  id         String @id @default(uuid())
   amountPaid Float
-  
+
+  platformFee    Float // E.g., The 10% you keep
+  sellerEarnings Float // E.g., The 90% the seller gets
+
+  status        OrderStatus @default(PENDING)
+  transactionId String?     @unique // e.g., Stripe Checkout Session ID or Payment Intent
+
   // Relations
-  buyerId    String
-  buyer      User     @relation(fields: [buyerId], references: [id])
-  promptId   String
-  prompt     Prompt   @relation(fields: [promptId], references: [id])
-  
-  createdAt  DateTime @default(now())
+  buyerId  String
+  buyer    User   @relation(fields: [buyerId], references: [id])
+  promptId String
+  prompt   Prompt @relation(fields: [promptId], references: [id])
+
+  createdAt DateTime @default(now())
 }
 
 model Review {
-  id         String   @id @default(uuid())
-  rating     Int      // e.g., 1 to 5
-  comment    String?
-  
+  id      String  @id @default(uuid())
+  rating  Int // e.g., 1 to 5
+  comment String?
+
   // Relations
   reviewerId String
-  reviewer   User     @relation(fields: [reviewerId], references: [id])
+  reviewer   User   @relation(fields: [reviewerId], references: [id])
   promptId   String
-  prompt     Prompt   @relation(fields: [promptId], references: [id])
-  
-  createdAt  DateTime @default(now())
+  prompt     Prompt @relation(fields: [promptId], references: [id])
+
+  createdAt DateTime @default(now())
+}
+
+model Payout {
+  id     String @id @default(uuid())
+  amount Float
+  status String @default("PROCESSING")
+
+  // Relations
+  sellerId String
+  seller   User   @relation(fields: [sellerId], references: [id])
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
 }

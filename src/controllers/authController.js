@@ -1,39 +1,45 @@
 import bcrypt from 'bcrypt';
 import jwt from 'jsonwebtoken';
 import prisma from '../config/prisma.js';
+import { Role } from '@prisma/client';
+
+// --- HELPER: Secure Role Assigner ---
+// This prevents hackers from sending {"role": "ADMIN"} in the request body.
+const getSafeRole = (requestedRole) => {
+  if (requestedRole === 'SELLER') return Role.SELLER;
+  return Role.BUYER; // Defaults everything else to BUYER
+};
 
 // --- REGISTER A NEW USER ---
 export const register = async (req, res) => {
   try {
-    const { name, email, password } = req.body;
+    // ✨ FIX 1: Extract role from req.body again
+    const { name, email, password, role } = req.body;
 
-    // 1. Check if user already exists
     const existingUser = await prisma.user.findUnique({ where: { email } });
     if (existingUser) {
       return res.status(400).json({ error: 'Email already in use' });
     }
 
-    // 2. Hash the password
     const salt = await bcrypt.genSalt(10);
     const hashedPassword = await bcrypt.hash(password, salt);
 
-    // 3. Create the user in Neon
     const newUser = await prisma.user.create({
       data: {
         name,
         email,
         password: hashedPassword,
+        // ✨ FIX 2: Apply the Bouncer logic
+        role: getSafeRole(role), 
       },
     });
 
-    // 4. Generate a JWT Token
     const token = jwt.sign(
       { id: newUser.id, role: newUser.role },
       process.env.JWT_SECRET,
-      { expiresIn: '7d' } // Token lasts for 7 days
+      { expiresIn: '7d' }
     );
 
-    // 5. Send back the token and user info (excluding password)
     res.status(201).json({
       token,
       user: { id: newUser.id, name: newUser.name, email: newUser.email, role: newUser.role }
@@ -50,26 +56,22 @@ export const login = async (req, res) => {
   try {
     const { email, password } = req.body;
 
-    // 1. Find the user
     const user = await prisma.user.findUnique({ where: { email } });
     if (!user) {
       return res.status(400).json({ error: 'Invalid credentials' });
     }
 
-    // 2. Check the password
     const validPassword = await bcrypt.compare(password, user.password);
     if (!validPassword) {
       return res.status(400).json({ error: 'Invalid credentials' });
     }
 
-    // 3. Generate a JWT Token
     const token = jwt.sign(
       { id: user.id, role: user.role },
       process.env.JWT_SECRET,
       { expiresIn: '7d' }
     );
 
-    // 4. Send back the token
     res.status(200).json({
       token,
       user: { id: user.id, name: user.name, email: user.email, role: user.role }
@@ -83,37 +85,44 @@ export const login = async (req, res) => {
 
 // --- SYNC FIREBASE USER TO POSTGRESQL ---
 export const syncUser = async (req, res) => {
-
   try {
-    const { uid, email, name, picture } = req.user; 
-    const {role, avatar} = req.body;
 
-    // 1. Upsert: Create user if they don't exist, update if they do
+    const tokenName = req.user?.name || req.user?.displayName;
+    const uid = req.user?.uid || req.user?.user_id; 
+    const email = req.user?.email;
+    const picture = req.user?.picture || req.user?.avatar;
+
+    // 2. Aggressively check for 'name' OR 'displayName' from the Frontend
+    const bodyName = req.body?.name || req.body?.displayName;
+    const { avatar, role } = req.body; 
+
+    // 3. Prioritize body, then token, then strictly fallback
+    const finalName = bodyName || tokenName || 'New User';
+    const safeRole = role ? getSafeRole(role) : undefined;
+
     const user = await prisma.user.upsert({
       where: { email: email },
       update: { 
-        name: name || undefined, 
+        name: finalName, 
         avatar: avatar || picture || undefined,
-        role: role || undefined,
+        role: safeRole || undefined, 
       },
       create: {
         id: uid, 
         email: email,
-        name: name || 'New User',
+        name: finalName, 
         avatar: avatar || picture || null,
-        role: role || 'BUYER',
         password: "FIREBASE_AUTH_USER", 
+        role: safeRole || Role.BUYER, 
       },
     });
 
-    // 2. Mint the Express JWT so the rest of your protected routes work
     const token = jwt.sign(
       { id: user.id, role: user.role },
       process.env.JWT_SECRET,
       { expiresIn: '7d' }
     );
 
-    // 3. Send both back to the frontend
     res.status(200).json({
       token,
       user: { id: user.id, name: user.name, email: user.email, role: user.role, avatar: user.avatar }
