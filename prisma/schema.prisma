@@ -85,7 +85,7 @@ model Order {
   sellerEarnings Float // E.g., The 90% the seller gets
 
   status        OrderStatus @default(PENDING)
-  transactionId String?     @unique // e.g., Stripe Checkout Session ID or Payment Intent
+  transactionId String?     
 
   // Relations
   buyerId  String

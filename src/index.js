@@ -7,6 +7,8 @@ import promptRoutes from './routes/promptRoutes.js';
 import reviewRoutes from './routes/reviewRoutes.js';
 import orderRoutes from './routes/orderRoutes.js';
 import webhookRoutes from './routes/webhookRoutes.js';
+import sellerRoutes from './routes/sellerRoutes.js';
+import userRoutes from './routes/userRoutes.js';
 
 const app = express();
 const PORT = process.env.PORT || 5000;
@@ -31,6 +33,8 @@ const corsOptions = {
 
 app.use(cors(corsOptions));
 
+app.use('/api/webhooks', express.raw({ type: 'application/json' }), webhookRoutes);
+
 app.use(express.json()); 
 
 app.use('/api/auth', authRoutes);
@@ -38,6 +42,8 @@ app.use('/api/prompts', promptRoutes);
 app.use('/api/reviews', reviewRoutes);
 app.use('/api/orders', orderRoutes);
 app.use('/api/webhooks', webhookRoutes);
+app.use('/api/seller', sellerRoutes); 
+app.use('/api/users', userRoutes);
 
 app.get('/', (req, res) => {
   res.json({ message: 'Welcome to the PromptForge API!' });
