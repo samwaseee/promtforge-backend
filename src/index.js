@@ -9,6 +9,8 @@ import orderRoutes from './routes/orderRoutes.js';
 import webhookRoutes from './routes/webhookRoutes.js';
 import sellerRoutes from './routes/sellerRoutes.js';
 import userRoutes from './routes/userRoutes.js';
+import adminRoutes from './routes/adminRoutes.js'; 
+import { startLogRetention } from './utils/cleanup.js';
 
 const app = express();
 const PORT = process.env.PORT || 5000;
@@ -44,10 +46,13 @@ app.use('/api/orders', orderRoutes);
 app.use('/api/webhooks', webhookRoutes);
 app.use('/api/seller', sellerRoutes); 
 app.use('/api/users', userRoutes);
+app.use('/api/admin', adminRoutes); // Add this line for admin routes
 
 app.get('/', (req, res) => {
   res.json({ message: 'Welcome to the PromptForge API!' });
 });
+
+startLogRetention();
 
 app.listen(PORT, () => {
   console.log(`🚀 Server is blasting off on http://localhost:${PORT}`);

@@ -86,22 +86,22 @@ export const login = async (req, res) => {
 // --- SYNC FIREBASE USER TO POSTGRESQL ---
 export const syncUser = async (req, res) => {
   try {
-
     const tokenName = req.user?.name || req.user?.displayName;
     const uid = req.user?.uid || req.user?.user_id; 
-    const email = req.user?.email;
+    
+    // ✨ THE FIX: Add a fallback for GitHub/Twitter users with hidden emails
+    const email = req.user?.email || `${uid}@hidden.oauth.user`;
+    
     const picture = req.user?.picture || req.user?.avatar;
 
-    // 2. Aggressively check for 'name' OR 'displayName' from the Frontend
     const bodyName = req.body?.name || req.body?.displayName;
     const { avatar, role } = req.body; 
 
-    // 3. Prioritize body, then token, then strictly fallback
     const finalName = bodyName || tokenName || 'New User';
     const safeRole = role ? getSafeRole(role) : undefined;
 
     const user = await prisma.user.upsert({
-      where: { email: email },
+      where: { email: email }, // Prisma will no longer crash here!
       update: { 
         name: finalName, 
         avatar: avatar || picture || undefined,
@@ -109,7 +109,7 @@ export const syncUser = async (req, res) => {
       },
       create: {
         id: uid, 
-        email: email,
+        email: email, // Saves the real email, or the safe placeholder
         name: finalName, 
         avatar: avatar || picture || null,
         password: "FIREBASE_AUTH_USER", 
@@ -129,7 +129,10 @@ export const syncUser = async (req, res) => {
     });
 
   } catch (error) {
+    // ✨ Pro-tip: Look at your backend terminal when a 500 happens. 
+    // This console.log will tell you exactly what line caused the crash!
     console.error("Sync Error:", error);
     res.status(500).json({ error: "Failed to sync user with database" });
   }
 };
+

@@ -3,7 +3,7 @@ import Stripe from 'stripe';
 import { OrderStatus } from '@prisma/client';
 
 // Initialize Stripe (You'll add this key to your .env later)
-const stripe = new Stripe(process.env.STRIPE_SECRET_KEY);
+const stripe = new Stripe(process.env.STRIPE_SECRET_KEY || 'sk_test_placeholder');
 
 export const handlePaymentWebhook = async (req, res) => {
   const sig = req.headers['stripe-signature'];

@@ -122,3 +122,12 @@ model Payout {
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
 }
+
+model SystemLog {
+  id        String   @id @default(uuid())
+  level     String   // "INFO", "WARN", "ERROR"
+  action    String   // e.g., "PROMPT_APPROVED", "USER_SUSPENDED", "LOGIN"
+  message   String
+  userId    String?
+  createdAt DateTime @default(now())
+}

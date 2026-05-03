@@ -5,7 +5,7 @@ import Stripe from 'stripe';
 const baseUrl = process.env.FRONTEND_URL || 'http://localhost:3000';
 
 // Initialize Stripe (Requires your secret key from the Stripe Dashboard)
-const stripe = new Stripe(process.env.STRIPE_SECRET_KEY);
+const stripe = new Stripe(process.env.STRIPE_SECRET_KEY || 'sk_test_placeholder');
 
 export const createOrder = async (req, res) => {
   try {
