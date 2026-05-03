@@ -2,7 +2,7 @@ import prisma from '../config/prisma.js';
 import { OrderStatus } from '@prisma/client';
 import Stripe from 'stripe';
 
-const baseUrl = process.env.FRONTEND_URL || 'http://localhost:3000';
+const baseUrl = process.env.FRONTEND_URL;
 
 // Initialize Stripe (Requires your secret key from the Stripe Dashboard)
 const stripe = new Stripe(process.env.STRIPE_SECRET_KEY || 'sk_test_placeholder');
@@ -117,7 +117,7 @@ export const checkoutCart = async (req, res) => {
       quantity: 1,
     }));
 
-    const baseUrl = process.env.FRONTEND_URL || 'http://localhost:3000';
+    const baseUrl = process.env.FRONTEND_URL;
 
     const session = await stripe.checkout.sessions.create({
       payment_method_types: ['card'],
